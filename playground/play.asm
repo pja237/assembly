@@ -20,6 +20,15 @@ main:
     mov rax,107 ; geteuid(void)
     syscall
 
+    call f_print
+
+    mov rax,60 ; exit(int status)
+    ; User-level applications use as integer registers for passing the sequence %rdi, %rsi, %rdx, %rcx, %r8 and %r9. 
+    ; The kernel interface uses %rdi, %rsi, %rdx, %r10, %r8 and %r9.
+    mov rdi,0 ; int status
+    syscall
+
+f_print:
     ; http://www.x86-64.org/documentation/abi.pdf
     ; 3.2.3 Parameter Passing
     ; page 21:  If the class is INTEGER, the next available register of the sequence %rdi, %rsi, %rdx, %rcx, %r8 and %r9 is used.
@@ -30,12 +39,7 @@ main:
     ; still not quite clear why? because of the above: variable arguments?
     mov rax,0 
     call printf
-
-    mov rax,60 ; exit(int status)
-    ; User-level applications use as integer registers for passing the sequence %rdi, %rsi, %rdx, %rcx, %r8 and %r9. 
-    ; The kernel interface uses %rdi, %rsi, %rdx, %r10, %r8 and %r9.
-    mov rdi,0 ; int status
-    syscall
+    ret
 
 section .data
 printmsg: db 'geteuid() = %d',10,0 ; msg + LINEFEED + 0
