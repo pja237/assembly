@@ -9,79 +9,85 @@ BITS 64
 section .text
     global _start
 _start:
+    nop
+    ; encode input into 4 bits, why not 3? because.
 
-    ; SETUP
-    ; SCASW - compare WORD from AX with WORD @ ES:DI
-    ; After the comparison, the (E)DI register is incremented or decremented automatically according to the setting of
-    ; the DF flag in the EFLAGS register. If the DF flag is 0, the (E)DI register is incremented; if the DF flag is 1, the (E)DI
-    ; register is decremented. The register is incremented or decremented by 1 for byte operations, by 2 for word oper-
-    ; ations, and by 4 for doubleword operations.
+    ; load input
+    ;
+    ; LODSQ load SI -> RAX
+    ;mov rsi, matrix_a
+    ;lodsq
+    ;mov rcx, 8
 
-    mov r15, hits ; address of hits, to be used as DI later 
-    mov rdi, matrix
-    mov rcx, [matrix_size]
-    
-    mov al, [pattern] ; put 1st character of pattern in AL to be used with SCASW
+    vzeroall
+    ; VPADDUSB ymm1, ymm2, ymm3/m256
+    ; Add packed unsigned byte integers from
+    ; ymm2, and ymm3/m256 and store the
+    ; saturated results in ymm1.
+    VPADDUSB ymm0, ymm15, [matrix_256]
+    VPADDUSB ymm1, ymm15, [pattern]
+    ;vinserti128 ymm0, ymm1, [matrix_a], 0
+    ;vinserti128 ymm2, ymm3, [matrix_x], 0
+    ;
+    ; ymm2 = v32_int8 = {0, 0, 0, 3, 4, 3, 2, 1, 5, 5, 1, 1, 2, 2, 3, 4, 5, 2, 5, 1, 2, 5, 3, 5, 2, 1, 5, 3, 3, 4, 5, 1}
+    ; VXORPS ymm2, ymm0, ymm1
 
-    ; we need a loop here
-MAINLOOP:
-    repne scasb ; compare matrix byte-by-byte with AL character until equal
-    jz hit
-    ; and here
+    ; ymm2 = v32_int8 = {0, 0, 0, 3, 4, 3, 2, 1, 5, 5, 1, 1, 2, 2, 3, 4, 5, 2, 5, 1, 2, 5, 3, 5, 2, 1, 5, 3, 3, 4, 5, 1}
+    ; VPXOR ymm2, ymm0, ymm1
+
+    ; ymm2 = v32_int8 = {5, 1, 2, 0 <repeats 29 times>}
+    ; ymm1 = v32_int8 = {5, 1, 2, 0 <repeats 29 times>}
+    ; COMPARE IF EQUAL?
+    VPAND ymm2, ymm0, ymm1
+
+    ; if equal, ymm3 will be all-0
+    VPXOR ymm3, ymm1, ymm2
+    ; then test if it is
+    VPTEST ymm3, ymm15
+    jz HIT
+
+CONT:
+
+    ; ymm2 = v32_int8 = {-1, -1, -1, 0 <repeats 29 times>}
+    ; VPCMPEQB  ymm2, ymm0, ymm1
+
+    ; TO CHECK: >>> PCMPESTRI <<<
 
     nop
 
+    ; EXIT
     mov rax,60 ; exit(int status)
     ; User-level applications use as integer registers for passing the sequence %rdi, %rsi, %rdx, %rcx, %r8 and %r9. 
     ; The kernel interface uses %rdi, %rsi, %rdx, %r10, %r8 and %r9.
     mov rdi,0 ; int status
     syscall
 
-hit:
-    nop
-    ; save CX, DI for later
-    mov r8, rcx
-    mov r9, rdi
-    ; compare rest of pattern 
-    mov rcx, SUBPATTERN_SIZE
-    mov rsi, pattern+1
-    repe cmpsb
-    jz match
-    ; NO MATCH, restore RAX, RCX & RDI and go back to continue from there
-    mov rcx, r8
-    mov rdi, r9
-    mov al, [pattern]
-    ; OR... CONTINUE FROM HERE!?
-    jmp eohit
-match:
-    ; rewrite this to return RDI & RCX saved in hit above, not after full match, because in case:
-    ; matrix: AAA AAA
-    ; pattern: AAA
-    ; must return 111100 result, not: 100100
-    inc r10 ; hits counter register
-    mov r14, rdi ; tmp save DI
-    mov rdi, r15 ; put hits in DI
-    mov rax, r8  ; prepare HIT position for STOSQ 
-    inc rax
-    stosq ; save RAX to DI
-    ; save HITS DI to R15 for later, restore regs
-    mov r15, rdi ; new hits DI
-    mov rdi, r14 ; matrix DI
-    mov rcx, r8  ; counter how much of matrix is left
-    sub rcx, SUBPATTERN_SIZE
-    ; mov rax, 0x0000000000000000
-    mov al, [pattern]
-eohit:
-    nop
-    jmp MAINLOOP
-
+HIT:
+    mov rbx, 1
+    ; VPSHUFB ymm1, ymm2, ymm3/m256
+    ; VPSHUFB ymm0, ymm0, [matrix_shuffle]
+    ;
+    ; VPSRLDQ|VPSLLDQ ymm1, ymm2, imm8
+    ; Shift ymm1 right|left by imm8 bytes while shifting in 0s.
+    ; VPSRLDQ ymm1, ymm1, 1
+    VPSLLDQ ymm1, ymm1, 1
+    jmp CONT 
 
 section .data
-;           0987654321098765432109876543210987654321098765432109876543210987654321098765432109876543210987654321
-matrix: db 'ACATATACGACAAAACATAAAAATAAAATAGAATATAAAAACAATATACCGACATATAACGAAAATAACACGCGTACGAAACATACGACGCGAAACGAAC'
-matrix_size: dq 100
-;pattern: db 'TA'
-pattern: db 'AAAA'
+; A=1
+; C=2
+; T=3
+; G=4
+; N=5
+; matrix_256: db 5,1,2,3,4,3,2,1,5,5,1,1,2,2,3,4,5,2,5,1,2,5,3,5,2,1,5,3,3,4,5,1
+matrix_256: db 32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
+; matrix_shuffle: db 5,4,3,2,1,0,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+; matrix_shuffle: db 32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
+matrix_shuffle: db 1000001b,0000000b,0000010b,0000011b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,
+
+; pattern NCT
+; pattern: db 5,1,2
+pattern: db 32,31,30
 
 section .bss
 hits: resq 100 ; record 10 hits
