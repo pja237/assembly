@@ -37,19 +37,23 @@ _start:
 
     ; ymm2 = v32_int8 = {5, 1, 2, 0 <repeats 29 times>}
     ; ymm1 = v32_int8 = {5, 1, 2, 0 <repeats 29 times>}
-    ; COMPARE IF EQUAL?
-    VPAND ymm2, ymm0, ymm1
-
-    ; if equal, ymm3 will be all-0
-    VPXOR ymm3, ymm1, ymm2
-    ; then test if it is
-    VPTEST ymm3, ymm15
-    jz HIT
-
-CONT:
 
     ; ymm2 = v32_int8 = {-1, -1, -1, 0 <repeats 29 times>}
     ; VPCMPEQB  ymm2, ymm0, ymm1
+
+LOOP:
+    ; TEST IF HIT
+    VPAND ymm2, ymm0, ymm1
+    ; if equal, ymm3 will be all-0
+    VPXOR ymm3, ymm1, ymm2
+    ; then test if it is
+    VPTEST ymm3, ymm3
+    jz HIT
+
+    ; if not: shift and return
+    mov rbx, 0 ; hit flag down
+    VPSLLDQ ymm1, ymm1, 1
+    jmp LOOP
 
     ; TO CHECK: >>> PCMPESTRI <<<
 
@@ -63,7 +67,9 @@ CONT:
     syscall
 
 HIT:
-    mov rbx, 1
+    ; we must manually clear CARRY & ZERO flags
+    ; CLC ; clear CARRY
+    mov rbx, 1 ; hit flag up
     ; VPSHUFB ymm1, ymm2, ymm3/m256
     ; VPSHUFB ymm0, ymm0, [matrix_shuffle]
     ;
@@ -71,7 +77,7 @@ HIT:
     ; Shift ymm1 right|left by imm8 bytes while shifting in 0s.
     ; VPSRLDQ ymm1, ymm1, 1
     VPSLLDQ ymm1, ymm1, 1
-    jmp CONT 
+    jmp LOOP
 
 section .data
 ; A=1
@@ -80,14 +86,16 @@ section .data
 ; G=4
 ; N=5
 ; matrix_256: db 5,1,2,3,4,3,2,1,5,5,1,1,2,2,3,4,5,2,5,1,2,5,3,5,2,1,5,3,3,4,5,1
-matrix_256: db 32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
+; matrix_256: db 32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
+matrix_256: db 'ATCNNTCAAATCANGGCGCATATBGCATCACG'
 ; matrix_shuffle: db 5,4,3,2,1,0,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
 ; matrix_shuffle: db 32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
-matrix_shuffle: db 1000001b,0000000b,0000010b,0000011b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,
+; matrix_shuffle: db 1000001b,0000000b,0000010b,0000011b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,
 
 ; pattern NCT
 ; pattern: db 5,1,2
-pattern: db 32,31,30
+; pattern: db 32,31,30
+pattern: db 'TC'
 
 section .bss
 hits: resq 100 ; record 10 hits

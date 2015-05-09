@@ -5,3 +5,4 @@ display /d $ymm1
 display /d $ymm2
 display /d $ymm3
 display /d $rbx
+display $eflags
