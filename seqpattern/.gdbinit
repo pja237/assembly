@@ -5,4 +5,7 @@ display /d $ymm1
 display /d $ymm2
 display /d $ymm3
 display /d $rbx
+display /d $rax
+display /d $rcx
+display /d $rdx
 display $eflags
