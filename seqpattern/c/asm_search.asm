@@ -223,4 +223,5 @@ section .data
 ;hitmask: db 11111111b,11111111b,11111111b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b
 
 section .bss
-hits: resq 100 ; record 10 hits
+;hits: resq 100 ; record 10 hits
+hits: resb 1000 ; record 10 hits
