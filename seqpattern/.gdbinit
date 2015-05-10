@@ -3,9 +3,7 @@ display /5i $rip
 display /d $ymm0
 display /d $ymm1
 display /d $ymm2
-display /d $ymm3
-display /d $ymm4
-display /d $ymm5
+display /d $ymm13
 display /d $rbx
 display /d $rax
 display /d $rcx

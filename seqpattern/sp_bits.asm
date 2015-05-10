@@ -34,6 +34,7 @@ _start:
     ;VPADDUSB ymm0, ymm15, [matrix_256]
     VPADDUSB ymm1, ymm15, [pattern]
     VPADDUSB ymm14, ymm15, [hitmask]
+
     ;vinserti128 ymm0, ymm1, [matrix_a], 0
     ;vinserti128 ymm2, ymm3, [matrix_x], 0
     ;
@@ -54,8 +55,6 @@ OUT_LOOP:
     ; zero registers
     VXORPD ymm0, ymm0, ymm0 ; input
     VXORPD ymm2, ymm2, ymm2 ; tmp
-    VXORPD ymm3, ymm3, ymm3 ; tmp
-
 
     ; IF OUTER_LOOP=0: SET RCX (INNER_LOOP) TO BE REST
     ; ELSE RCX=INNER_LOOP (32-pattern_len)
@@ -75,6 +74,9 @@ ENDIF:
     VPADDUSB ymm0, ymm15, [matrix_256+r8]
     add r8, rcx
     ;add r8, 1
+
+    ; keep the 'flipped' input for faster over-the-lane byte shift
+    VPERM2F128 ymm13, ymm0, ymm0, 1
 
     nop
 
@@ -124,17 +126,20 @@ LOOP:
     ; SWAP
     ; VPERM2F128 ymm1, ymm2, ymm3/m256, imm8
     ; Permute 128-bit floating-point fields in ymm2 and ymm3/mem using controls from imm8 and store result in ymm1.
-    VPERM2F128 ymm0, ymm0, ymm0, 1
+    ;VPERM2F128 ymm0, ymm0, ymm0, 1
 
     ; get byte
-    VPEXTRB rbx, xmm0, 0
+    ;VPEXTRB rbx, xmm0, 0
+    VPEXTRB rbx, xmm13, 0
 
     ; return things back
-    VPERM2F128 ymm0, ymm0, ymm0, 1
+    ;VPERM2F128 ymm0, ymm0, ymm0, 1
 
     ; shift <<
     ; VPSLLDQ ymm0, ymm0, 1
     VPSRLDQ ymm0, ymm0, 1
+    ; shift the shift-temp helper also
+    VPSRLDQ ymm13, ymm13, 1
 
     ; but byte back in at the end
     ; VPINSRB xmm1, xmm2, r32/m8, imm8
