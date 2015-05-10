@@ -9,10 +9,22 @@ BITS 64
 %define REST INPUT_LEN - PATTERN_LEN - (OUTER_LOOP*INNER_LOOP)
 
 section .text
-    extern polje
     global _asm_search
     global hits
 _asm_search:
+
+; Registers %rbp, %rbx and %r12 through %r15 belong to the calling function and the called function is
+; required to preserve their values. In other words, a called function must preserve
+; these registers values for its caller. Remaining registers belong to the called
+; function.5 If a calling function wants to preserve such a register value across a
+; function call, it must save the value in its local stack frame.
+    push rbp
+    push rbx
+    push rdi
+    push rsi
+    mov rbp, rsp
+; 
+
     nop
 
     ; GET VALUES FROM CALLING FUNCTION
@@ -96,7 +108,8 @@ NOTEQ:
 ENDIF:
 
     ; because of inner loop LOOP directive (exits loop @ 1)
-    ;inc rcx
+    ; FIX: last-position pattern miss
+    inc rcx
     ; load registers
     ; VPADDUSB ymm0, ymm15, [matrix_256+[r8]]
     ;VPADDUSB ymm0, ymm15, [matrix_256+r8]
@@ -214,8 +227,12 @@ THE_END:
     ;mov rdi,0 ; int status
     ;syscall
     
-    ;popa
-    ;mov rax, 237
+    mov rsp, rbp
+    pop rsi
+    pop rdi
+    pop rbx
+    pop rbp
+
     mov rax, hits
     ret
 
