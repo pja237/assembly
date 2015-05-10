@@ -11,7 +11,7 @@ extern char* _asm_search(char *input, char *pattern, char *hitmask, int inner_lo
 
 /* 301 WORKS, 302 SEGFAULTS? */
 /* #define INPUT_LEN 302 */
-#define INPUT_LEN 100000000
+#define INPUT_LEN 500
 #define PATTERN_LEN 2
 
 #define INNER_LOOP 32-PATTERN_LEN
@@ -22,6 +22,8 @@ int main(void)
 {
     int i;
     struct timeb stop, start;
+
+    FILE *OUTPUT_FILE;
 
     char *input;
     char pattern[32]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
@@ -94,13 +96,18 @@ int main(void)
     diff = (int) (1000.0 * (stop.time - start.time) + (stop.millitm - start.millitm));
     printf("asm_ret(%d) time: %u ms\n", INPUT_LEN, diff);
 
-/*
-    printf("asm_search() returned:\n");
+    OUTPUT_FILE=fopen("./caller.out", "w");
+/* printf("asm_search() returned:\n"); */
     for(i=0; i<INPUT_LEN; i++) {
-        printf("%d ", asm_ret[i]);
+        fprintf(OUTPUT_FILE, "%c ", input[i]);
     }
+    fprintf(OUTPUT_FILE, "\n");
+    for(i=0; i<INPUT_LEN; i++) {
+        fprintf(OUTPUT_FILE, "%d ", asm_ret[i]);
+    }
+    fprintf(OUTPUT_FILE, "\n");
     printf("\n");
-*/
+    fclose(OUTPUT_FILE);
 
     return 0;
 }
