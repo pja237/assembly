@@ -234,4 +234,4 @@ section .data
 
 section .bss
 ;hits: resq 100 ; record 10 hits
-hits: resb 10000 ; record 10 hits
+hits: resb 100000000 ; record 10 hits

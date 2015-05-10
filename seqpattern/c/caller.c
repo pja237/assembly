@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/timeb.h>
+
 
 extern char* _asm_search(char *input, char *pattern, char *hitmask, int inner_loop, int outer_loop, int rest);
 
@@ -9,7 +11,7 @@ extern char* _asm_search(char *input, char *pattern, char *hitmask, int inner_lo
 
 /* 301 WORKS, 302 SEGFAULTS? */
 /* #define INPUT_LEN 302 */
-#define INPUT_LEN 10000
+#define INPUT_LEN 100000000
 #define PATTERN_LEN 2
 
 #define INNER_LOOP 32-PATTERN_LEN
@@ -19,6 +21,7 @@ extern char* _asm_search(char *input, char *pattern, char *hitmask, int inner_lo
 int main(void)
 {
     int i;
+    struct timeb stop, start;
 
     char *input;
     char pattern[32]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
@@ -26,6 +29,7 @@ int main(void)
     char *asm_ret;
 
     int il, ol, r, fl;
+
     il=32-PATTERN_LEN;
     ol=(INPUT_LEN-PATTERN_LEN)/il;
     r=(INPUT_LEN-PATTERN_LEN)-(ol*il);
@@ -71,24 +75,32 @@ int main(void)
         }
     }
 
+/*
     printf("Randomly generated input:\n");
     for(i=0; i<fl; i++) {
         printf("%c ",*(input+i));
     }
     printf("\n");
-
+*/
 
     /* If the class is INTEGER, the next available register of the sequence %rdi, %rsi, %rdx, %rcx, %r8 and %r9 is used */
     /* 6 parameters */
     /*                    rdi     rsi     rdx        rcx         r8       r9 */
     /* asm_ret=_asm_search(input, pattern, hitmask, INNER_LOOP, OUTER_LOOP, REST); */
-    asm_ret=_asm_search(input, pattern, hitmask, il, ol, r);
+    ftime(&start);
+        asm_ret=_asm_search(input, pattern, hitmask, il, ol, r);
+    ftime(&stop);
+    int diff;
+    diff = (int) (1000.0 * (stop.time - start.time) + (stop.millitm - start.millitm));
+    printf("asm_ret(%d) time: %u ms\n", INPUT_LEN, diff);
 
+/*
     printf("asm_search() returned:\n");
     for(i=0; i<INPUT_LEN; i++) {
         printf("%d ", asm_ret[i]);
     }
     printf("\n");
+*/
 
     return 0;
 }
