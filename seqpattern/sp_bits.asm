@@ -40,6 +40,7 @@ _start:
     ; saturated results in ymm1.
     ;VPADDUSB ymm0, ymm15, [matrix_256]
     VPADDUSB ymm1, ymm15, [pattern]
+    VPADDUSB ymm14, ymm15, [hitmask]
     ;vinserti128 ymm0, ymm1, [matrix_a], 0
     ;vinserti128 ymm2, ymm3, [matrix_x], 0
     ;
@@ -85,13 +86,23 @@ ENDIF:
     nop
 
 LOOP:
-    ; TEST IF HIT
-    VPAND ymm2, ymm0, ymm1
-    ; if equal, ymm3 will be all-0
-    VPXOR ymm3, ymm1, ymm2
-    ; then test if it is
-    VPTEST ymm3, ymm3
+    nop
 
+    ; new test, using predefined bitmask of a hit: ymm14
+    VPCMPEQB ymm2, ymm0, ymm1
+    VPXOR ymm2, ymm2, ymm14
+    ; if hit, ymm4==0
+
+; this doesn't work, try packed byte compare
+; -------------------------------------
+    ; TEST IF HIT
+    ;VPAND ymm2, ymm0, ymm1
+    ; if equal, ymm3 will be all-0
+    ;VPXOR ymm3, ymm1, ymm2
+; -------------------------------------
+
+    ; if HIT, ymm2 == 0
+    VPTEST ymm2, ymm2
     ; jz HIT
     ;
     ; IF ZF==1 then it's a hit, avoid jmp and do SETcc
@@ -181,6 +192,7 @@ section .data
 ; matrix_256: db 32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
 ;                                               . 32 + 19 = 51
 matrix_256: db 'ATCNNTCAAATCANGTCGCATATBGCATCACXCCATCACNTCNGGCTATCN'
+blank_256: db 0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b
 ; matrix_shuffle: db 5,4,3,2,1,0,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
 ; matrix_shuffle: db 32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
 ; matrix_shuffle: db 1000001b,0000000b,0000010b,0000011b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,
@@ -188,7 +200,14 @@ matrix_256: db 'ATCNNTCAAATCANGTCGCATATBGCATCACXCCATCACNTCNGGCTATCN'
 ; pattern NCT
 ; pattern: db 5,1,2
 ; pattern: db 32,31,30
-pattern: db 'TC'
+
+; 2 6 11 16 28 36 41 49
+pattern: db 'TC',1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b
+hitmask: db 11111111b,11111111b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b
+
+; 6 11 28 36
+;pattern: db 'TCA',1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b
+;hitmask: db 11111111b,11111111b,11111111b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b
 
 section .bss
 hits: resq 100 ; record 10 hits
