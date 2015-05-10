@@ -14,13 +14,6 @@ _start:
     nop
     ; encode input into 4 bits, why not 3? because.
 
-    ; load input
-    ;
-    ; LODSQ load SI -> RAX
-    ;mov rsi, matrix_a
-    ;lodsq
-    ;mov rcx, 8
-
     ; DEBUG
     ;mov rax, INNER_LOOP
     ;mov rbx, OUTER_LOOP
@@ -151,8 +144,6 @@ LOOP:
     PINSRB xmm0, bl, 15
     ; yes... :)
 
-    ; VPINSRB xmm0, xmm0, bl, 17
-
     ; shift & return 
     ; we're not shifting pattern anymore, we're shifting matrix now, pattern stays fixed...
     ; VPSLLDQ ymm1, ymm1, 1
@@ -183,23 +174,9 @@ THE_END:
     syscall
 
 section .data
-; A=1
-; C=2
-; T=3
-; G=4
-; N=5
-; matrix_256: db 5,1,2,3,4,3,2,1,5,5,1,1,2,2,3,4,5,2,5,1,2,5,3,5,2,1,5,3,3,4,5,1
-; matrix_256: db 32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
 ;                                               . 32 + 19 = 51
 matrix_256: db 'ATCNNTCAAATCANGTCGCATATBGCATCACXCCATCACNTCNGGCTATCN'
 blank_256: db 0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b
-; matrix_shuffle: db 5,4,3,2,1,0,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
-; matrix_shuffle: db 32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
-; matrix_shuffle: db 1000001b,0000000b,0000010b,0000011b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,0000000b,
-
-; pattern NCT
-; pattern: db 5,1,2
-; pattern: db 32,31,30
 
 ; 2 6 11 16 28 36 41 49
 pattern: db 'TC',1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b,1b
