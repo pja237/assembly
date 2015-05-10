@@ -84,12 +84,15 @@ OUT_LOOP:
     ; ELSE RCX=INNER_LOOP (32-pattern_len)
     CMP rdx, 0
     jne NOTEQ
-    ; rdx == 0
+    ; rdx == 0, so this is the last round, only REST is remaining
+    ; >>>>>>>> BUG 302! if REST==0 => SEGFAULT BECAUSE WE'RE DONE, NO MORE PULLING MEMORY <<<<<<<<<<<<<
     ;mov rcx, REST ; standalone before
+    cmp r9, 0 ; if REST==0, we're done, go to end, otherwise, shit happens with LOOP below
+    je THE_END
     mov rcx, r9 ; now arriving via r9 from caller.c
     jmp ENDIF
 NOTEQ:
-    mov rcx, r11
+    mov rcx, r11 ; r11 == INNER_LOOP
 ENDIF:
 
     ; because of inner loop LOOP directive (exits loop @ 1)
@@ -179,6 +182,13 @@ LOOP:
     ; we're not shifting pattern anymore, we're shifting matrix now, pattern stays fixed...
     ; VPSLLDQ ymm1, ymm1, 1
     ;jmp LOOP
+
+    ; Each time the LOOP instruction is executed, the count register is decremented, then checked for 0. If the count is
+    ; 0, the loop is terminated and program execution continues with the instruction following the LOOP instruction. If
+    ; the count is not zero, a near jump is performed to the destination (target) operand, which is presumably the
+    ; instruction at the beginning of the loop.
+    ; >>> 302 <<<
+    ; IF RCX == 0 here, we DON'T EXIT LOOP, we go on forever, i.e. until segfault
     loop LOOP
 ; -------------------------------------------------------------------------------- 
     ; TO CHECK: >>> PCMPESTRI <<<
@@ -224,4 +234,4 @@ section .data
 
 section .bss
 ;hits: resq 100 ; record 10 hits
-hits: resb 1000 ; record 10 hits
+hits: resb 10000 ; record 10 hits

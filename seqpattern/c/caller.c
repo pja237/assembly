@@ -8,7 +8,8 @@ extern char* _asm_search(char *input, char *pattern, char *hitmask, int inner_lo
 /* #define INPUT_LEN 51 */
 
 /* 301 WORKS, 302 SEGFAULTS? */
-#define INPUT_LEN 301
+/* #define INPUT_LEN 302 */
+#define INPUT_LEN 10000
 #define PATTERN_LEN 2
 
 #define INNER_LOOP 32-PATTERN_LEN
@@ -24,11 +25,12 @@ int main(void)
     char hitmask[32]={255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     char *asm_ret;
 
-    int il, ol, r;
+    int il, ol, r, fl;
     il=32-PATTERN_LEN;
     ol=(INPUT_LEN-PATTERN_LEN)/il;
     r=(INPUT_LEN-PATTERN_LEN)-(ol*il);
-    printf("il=%d ol=%d r=%d\n",il,ol,r);
+    fl=(ol+1)*32; /* FIXED_LENGTH */
+    printf("il=%d ol=%d r=%d fl=%d\n",il,ol,r,fl);
 
     /* input=(char *) calloc(sizeof(char), 51); */
     /* strncpy(input, "ATCNNTCAAATCANGTCGCATATBGCATCACXCCATCACNTCNGGCTATCN", 51); */
@@ -37,8 +39,19 @@ int main(void)
 
     /* random input generator */
 
+    /* BUG 302! if REST==0 or REST<PATTERN_LEN then we shouldn't be pulling more memory into register after the last OUTER_LOOP */
+    /* how to deal with that? */
+    /* A) round input here to be multiple of 32 and fill that with Ns ? */
+    /* B) do something?! in asm_search.asm ... fuck me, that will most likely lead to a clusterfuck of new bugs :S */
+    /* C) do the REST-test here and send rest=0 to asm, there put if rest==0: goto end! */
+
+    /* attempt 1. */
+    /* 1. round input to 32 byte multiple */
+    /* 2. fill difference with 0s */
+
     srand(time(NULL));
-    input=(char *) calloc(sizeof(char), INPUT_LEN);
+    /* input=(char *) calloc(sizeof(char), INPUT_LEN); */
+    input=(char *) calloc(sizeof(char), fl); /* using FIXED_LENGHT NOW */
 
     /* A = 0, C = 1, T = 2, G = 3, N = 4 */
 
@@ -59,7 +72,7 @@ int main(void)
     }
 
     printf("Randomly generated input:\n");
-    for(i=0; i<INPUT_LEN; i++) {
+    for(i=0; i<fl; i++) {
         printf("%c ",*(input+i));
     }
     printf("\n");
