@@ -8,4 +8,5 @@ display /d $rbx
 display /d $rax
 display /d $rcx
 display /d $rdx
+display /d $r8
 display $eflags

@@ -3,11 +3,10 @@ BITS 64
 %define INPUT_LEN 51
 %define PATTERN_LEN 2
 
-%define INNER_LOOP 32 - PATTERN_LEN 
-
-%define OUTER_LOOP (INPUT_LEN-PATTERN_LEN) / INNER_LOOP
-
-%define REST INPUT_LEN - PATTERN_LEN - OUTER_LOOP*32
+%define INNER_LOOP 32-PATTERN_LEN
+%define OUTER_LOOP (INPUT_LEN-PATTERN_LEN)/(INNER_LOOP)
+;%define REST INPUT_LEN - PATTERN_LEN - OUTER_LOOP*32
+%define REST INPUT_LEN - PATTERN_LEN - (OUTER_LOOP*INNER_LOOP)
 
 section .text
     global _start
@@ -75,13 +74,13 @@ NOTEQ:
     mov rcx, INNER_LOOP
 ENDIF:
 
-    ; because of inner loop LOOP directive
-    inc rcx
+    ; because of inner loop LOOP directive (exits loop @ 1)
+    ;inc rcx
     ; load registers
     ; VPADDUSB ymm0, ymm15, [matrix_256+[r8]]
     VPADDUSB ymm0, ymm15, [matrix_256+r8]
     add r8, rcx
-    add r8, 1
+    ;add r8, 1
 
     nop
 
