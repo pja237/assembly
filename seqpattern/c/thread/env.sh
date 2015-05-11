@@ -1,0 +1,3 @@
+export OMP_NUM_THREADS=4
+export OMP_PROC_BIND=TRUE
+export GOMP_CPU_AFFINITY="0 1 2 3"

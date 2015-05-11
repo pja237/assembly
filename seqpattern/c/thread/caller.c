@@ -6,20 +6,11 @@
 #include <unistd.h>
 #include <omp.h>
 
+extern void _asm_search(char *input, char *pattern, char *hitmask, char *output, int outer_loop, int rest);
 
-extern char* _asm_search(char *input, char *pattern, char *hitmask, int inner_loop, int outer_loop, int rest);
-char **test_matrix;
-
-#define ROWS 10
-
-/* 301 WORKS, 302 SEGFAULTS? */
-/* #define INPUT_LEN 302 */
-#define INPUT_LEN 500
+#define ROWS 1000
+#define INPUT_LEN 1000
 #define PATTERN_LEN 2
-
-#define INNER_LOOP 32-PATTERN_LEN
-#define OUTER_LOOP (INPUT_LEN-PATTERN_LEN)/(INNER_LOOP)
-#define REST (INPUT_LEN-PATTERN_LEN)-(OUTER_LOOP*INNER_LOOP)
 
 int main(void)
 {
@@ -30,15 +21,18 @@ int main(void)
 
     char pattern[32]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     char hitmask[32]={255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    char *asm_ret;
 
     char **input_matrix;
     char **output_matrix;
-    char *asm_return[ROWS];
 
     int il, ol, r, fl;
 
+    int iam, nt;
     int diff;
+
+/* -------------------------------------------------------------------------------- */
+/*                      HOUSEKEEPING AND SETUP                                      */
+/* -------------------------------------------------------------------------------- */
 
     il=32-PATTERN_LEN;
     ol=(INPUT_LEN-PATTERN_LEN)/il;
@@ -48,15 +42,20 @@ int main(void)
 
     strncpy(pattern, "TC", 2);
 
-    int iam, nt;
-    /* omp_set_num_threads(4); */
     srand(time(NULL));
+
+    /* omp_set_num_threads(4); */
 
     input_matrix=(char **) calloc(sizeof (char*), ROWS);
     output_matrix=(char **) calloc(sizeof (char*), ROWS);
-    test_matrix=(char **) calloc(sizeof (char*), ROWS);
 
 /* -------------------------------------------------------------------------------- */
+/*                      MATRIX INITIATION LOOP                                      */
+/* -------------------------------------------------------------------------------- */
+
+        ftime(&start);
+        printf("generate_input(%d x %d) in all threads started...", ROWS, INPUT_LEN);
+
 #pragma omp parallel for private(iam, nt)
     for(i=0; i<ROWS; i++) {
         int j;
@@ -66,9 +65,6 @@ int main(void)
 
         input_matrix[i]=(char *) calloc(sizeof(char), fl); /* using FIXED_LENGHT NOW */
         output_matrix[i]=(char *) calloc(sizeof(char), fl); /* using FIXED_LENGHT NOW */
-        test_matrix[i]=(char *) calloc(sizeof(char), fl); /* using FIXED_LENGHT NOW */
-
-        /* A = 0, C = 1, T = 2, G = 3, N = 4 */
 
         for(j=0; j<INPUT_LEN; j++) {
             int r = rand();
@@ -94,6 +90,10 @@ int main(void)
         /* sleep(5); */
     }
 
+        ftime(&stop);
+        diff = (int) (1000.0 * (stop.time - start.time) + (stop.millitm - start.millitm));
+        printf("generate_input(%d x %d) in all threads finished in %u ms\n", ROWS, INPUT_LEN, diff);
+
 /* -------------------------------------------------------------------------------- */
 /*
     printf("\nBack to master!\n");
@@ -108,62 +108,72 @@ int main(void)
     printf("\nDONE!\n");
 */
 /* -------------------------------------------------------------------------------- */
+/*                      _ASM_SEARCH LOOP                                            */
+/* -------------------------------------------------------------------------------- */
+        ftime(&start);
+        printf("_asm_search(%d x %d) in all threads started...", ROWS, INPUT_LEN);
 
-
-    ftime(&start);
-#pragma omp parallel for private(iam, nt, asm_return)
+#pragma omp parallel for private(iam, nt)
     for(i=0; i<ROWS; i++) {
         iam = omp_get_thread_num();
         nt = omp_get_num_threads();
         /* printf("Thread %d of %d. Working on %d ROW.\n", iam, nt, i); */
-            asm_return[i]=_asm_search(input_matrix[i], pattern, hitmask, il, ol, r);
-            memcpy(output_matrix[i], asm_return[i], INPUT_LEN);
 
-        /* printf("\n%d DONE!\n", iam); */
+            _asm_search(input_matrix[i], pattern, hitmask, output_matrix[i], ol, r);
+        /*
+        for(j=0; j<INPUT_LEN; j++) {
+            printf("%c ", input_matrix[i][j]);
+        }
+        printf("\n%d DONE!\n", iam);
+        */
         /* sleep(5); */
     }
 
-    ftime(&stop);
-    diff = (int) (1000.0 * (stop.time - start.time) + (stop.millitm - start.millitm));
-    printf("_asm_search(%d) in all threads finished in %u ms\n", INPUT_LEN, diff);
+        ftime(&stop);
+        diff = (int) (1000.0 * (stop.time - start.time) + (stop.millitm - start.millitm));
+        printf("_asm_search(%d x %d) in all threads finished in %u ms\n", ROWS, INPUT_LEN, diff);
 
 /* -------------------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------------- */
+/*                      DUMP TO SCREEN                                              */
+/* -------------------------------------------------------------------------------- */
+    /*
     printf("\nBack to master! Lets check results:\n");
     for(i=0; i<ROWS; i++) {
         int j;
         printf("INPUT %d : \n",i);
-    for(j=0; j<INPUT_LEN; j++) {
-        printf("%c ", input_matrix[i][j]);
-    }
+        for(j=0; j<INPUT_LEN; j++) {
+            printf("%c ", input_matrix[i][j]);
+        }
         printf("\nOUTPUT %d : \n",i);
-    for(j=0; j<INPUT_LEN; j++) {
-        printf("%d ", output_matrix[i][j]);
-    }
+        for(j=0; j<INPUT_LEN; j++) {
+            printf("%d ", output_matrix[i][j]);
+        }
         printf("\n");
     }
     printf("\nDONE!\n");
-
+    */
 /* -------------------------------------------------------------------------------- */
 
-    OUTPUT_FILE=fopen("./caller_mt.out", "w");
-
-    printf("\nBack to master! Dump results to caller_mt.out...\n");
+/* -------------------------------------------------------------------------------- */
+/*                      DUMP TO FILE                                                */
+/* -------------------------------------------------------------------------------- */
+    OUTPUT_FILE=fopen("./caller.out", "w");
     for(i=0; i<ROWS; i++) {
         int j;
         fprintf(OUTPUT_FILE, "INPUT %d : \n",i);
-    for(j=0; j<INPUT_LEN; j++) {
-        fprintf(OUTPUT_FILE, "%c ", input_matrix[i][j]);
-    }
+        for(j=0; j<INPUT_LEN; j++) {
+            fprintf(OUTPUT_FILE, "%c ", input_matrix[i][j]);
+        }
         fprintf(OUTPUT_FILE, "\nOUTPUT %d : \n",i);
-    for(j=0; j<INPUT_LEN; j++) {
-        fprintf(OUTPUT_FILE, "%d ", output_matrix[i][j]);
-    }
+        for(j=0; j<INPUT_LEN; j++) {
+            fprintf(OUTPUT_FILE, "%d ", output_matrix[i][j]);
+        }
         fprintf(OUTPUT_FILE, "\n");
     }
-    printf("\nDONE!\n");
-
     fclose(OUTPUT_FILE);
+/* -------------------------------------------------------------------------------- */
 
     return 0;
 }
