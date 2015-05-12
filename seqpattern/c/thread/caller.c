@@ -8,9 +8,9 @@
 
 extern void _asm_search(char *input, char *pattern, char *hitmask, char *output, int outer_loop, int rest);
 
-#define ROWS 1000
-#define INPUT_LEN 1000
-#define PATTERN_LEN 2
+#define ROWS 10000
+#define INPUT_LEN 100000
+#define PATTERN_LEN 4
 
 int main(void)
 {
@@ -20,7 +20,8 @@ int main(void)
     FILE *OUTPUT_FILE;
 
     char pattern[32]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
-    char hitmask[32]={255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    char hitmask[32]={255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    strncpy(pattern, "CGCG", 4);
 
     char **input_matrix;
     char **output_matrix;
@@ -40,8 +41,6 @@ int main(void)
     fl=(ol+1)*32; /* FIXED_LENGTH */
     printf("il=%d ol=%d r=%d fl=%d\n",il,ol,r,fl);
 
-    strncpy(pattern, "TC", 2);
-
     srand(time(NULL));
 
     /* omp_set_num_threads(4); */
@@ -54,7 +53,7 @@ int main(void)
 /* -------------------------------------------------------------------------------- */
 
         ftime(&start);
-        printf("generate_input(%d x %d) in all threads started...", ROWS, INPUT_LEN);
+        printf("generate_input(%d x %d) in all threads started...\n", ROWS, INPUT_LEN);
 
 #pragma omp parallel for private(iam, nt)
     for(i=0; i<ROWS; i++) {
@@ -92,7 +91,7 @@ int main(void)
 
         ftime(&stop);
         diff = (int) (1000.0 * (stop.time - start.time) + (stop.millitm - start.millitm));
-        printf("generate_input(%d x %d) in all threads finished in %u ms\n", ROWS, INPUT_LEN, diff);
+        printf("-> generate_input(%d x %d) in all threads finished in %u ms\n", ROWS, INPUT_LEN, diff);
 
 /* -------------------------------------------------------------------------------- */
 /*
@@ -111,7 +110,7 @@ int main(void)
 /*                      _ASM_SEARCH LOOP                                            */
 /* -------------------------------------------------------------------------------- */
         ftime(&start);
-        printf("_asm_search(%d x %d) in all threads started...", ROWS, INPUT_LEN);
+        printf("_asm_search(%d x %d) in all threads started...\n", ROWS, INPUT_LEN);
 
 #pragma omp parallel for private(iam, nt)
     for(i=0; i<ROWS; i++) {
@@ -131,7 +130,7 @@ int main(void)
 
         ftime(&stop);
         diff = (int) (1000.0 * (stop.time - start.time) + (stop.millitm - start.millitm));
-        printf("_asm_search(%d x %d) in all threads finished in %u ms\n", ROWS, INPUT_LEN, diff);
+        printf("-> _asm_search(%d x %d) in all threads finished in %u ms\n", ROWS, INPUT_LEN, diff);
 
 /* -------------------------------------------------------------------------------- */
 
@@ -159,20 +158,34 @@ int main(void)
 /* -------------------------------------------------------------------------------- */
 /*                      DUMP TO FILE                                                */
 /* -------------------------------------------------------------------------------- */
+/*
     OUTPUT_FILE=fopen("./caller.out", "w");
     for(i=0; i<ROWS; i++) {
         int j;
         fprintf(OUTPUT_FILE, "INPUT %d : \n",i);
         for(j=0; j<INPUT_LEN; j++) {
-            fprintf(OUTPUT_FILE, "%c ", input_matrix[i][j]);
+            fprintf(OUTPUT_FILE, "%c", input_matrix[i][j]);
         }
         fprintf(OUTPUT_FILE, "\nOUTPUT %d : \n",i);
         for(j=0; j<INPUT_LEN; j++) {
-            fprintf(OUTPUT_FILE, "%d ", output_matrix[i][j]);
+            fprintf(OUTPUT_FILE, "%d", output_matrix[i][j]);
         }
         fprintf(OUTPUT_FILE, "\n");
     }
     fclose(OUTPUT_FILE);
+*/
+/*
+    OUTPUT_FILE=fopen("./1G_input.out", "w");
+    for(i=0; i<ROWS; i++) {
+        int j;
+        fprintf(OUTPUT_FILE, ">\n");
+        for(j=0; j<INPUT_LEN; j++) {
+            fprintf(OUTPUT_FILE, "%c", input_matrix[i][j]);
+        }
+        fprintf(OUTPUT_FILE, "\n");
+    }
+    fclose(OUTPUT_FILE);
+*/
 /* -------------------------------------------------------------------------------- */
 
     return 0;

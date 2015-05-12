@@ -1,5 +1,0 @@
-pja@twoflower:~/WORK/src/assembly/seqpattern/c/thread$ ./caller 
-il=30 ol=3333 r=8 fl=106688
-generate_input(10000 x 100000) in all threads started...generate_input(10000 x 100000) in all threads finished in 238808 ms
-_asm_search(10000 x 100000) in all threads started..._asm_search(10000 x 100000) in all threads finished in 13961 ms
-

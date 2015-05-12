@@ -1,5 +1,7 @@
 BITS 64
 
+%define INNER_LOOP 28
+
 section .text
     global _asm_search
 _asm_search:
@@ -28,9 +30,11 @@ _asm_search:
 
     ; SETUP:
     ; 
-    VPADDUSB ymm1, ymm15, [rsi] ; pattern in ymm1
-    VPADDUSB ymm14, ymm15, [rdx] ; hitmask in ymm14
-    mov r11, 30 ; INNER_LOOP, old: r11, rcx new: r11,30
+    ;VPADDUSB ymm1, ymm15, [rsi] ; pattern in ymm1
+    VMOVUPS ymm1, [rsi] ; pattern in ymm1
+    ;VPADDUSB ymm14, ymm15, [rdx] ; hitmask in ymm14
+    VMOVUPS ymm14, [rdx] ; hitmask in ymm14
+    mov r11, INNER_LOOP ; INNER_LOOP, old: r11, rcx new: r11,30
     mov rdx, r8 ; OUTER_LOOP
 
     mov r10, rdi ; save input here for now, we need rdi for hits
@@ -54,14 +58,15 @@ OUT_LOOP:
     mov rcx, r9 ; now arriving via r9 from caller.c
     jmp ENDIF
 NOTEQ:
-    mov rcx, 30 ; r11 == INNER_LOOP (now const)
+    mov rcx, INNER_LOOP ; r11 == INNER_LOOP (now const)
 ENDIF:
 
     ; because of inner loop LOOP directive (exits loop @ 1)
     ; FIX: last-position pattern miss
     inc rcx
     ; load registers
-    VPADDUSB ymm0, ymm15, [r10+r8] ; input + offset
+    ;VPADDUSB ymm0, ymm15, [r10+r8] ; input + offset
+    VMOVUPS ymm0, [r10+r8] ; input + offset
     add r8, rcx
     ;add r8, 1
 
@@ -69,20 +74,42 @@ ENDIF:
     VPERM2F128 ymm13, ymm0, ymm0, 1
 
 LOOP:
+
+; -------------------------------------------------------------------------------- 
+;  ORIGINAL TEST
+; -------------------------------------------------------------------------------- 
+;    ; new test, using predefined bitmask of a hit: ymm14
+;    VPCMPEQB ymm2, ymm0, ymm1
+;    VPXOR ymm2, ymm2, ymm14
+;
+;    ; if HIT, ymm2 == 0
+;    VPTEST ymm2, ymm2
+;    ; jz HIT
+;    ;
+;    ; IF ZF==1 then it's a hit, avoid jmp and do SETcc
+;    SETZ AL
+;    ; For legacy mode, store AL at address ES:(E)DI;
+;    ; For 64-bit mode store AL at address RDI or EDI.
+;    STOSB
+; -------------------------------------------------------------------------------- 
+;  NEW TEST, remove the VPXOR op, and go straight to VTEST to check CF
+; -------------------------------------------------------------------------------- 
     ; new test, using predefined bitmask of a hit: ymm14
     VPCMPEQB ymm2, ymm0, ymm1
-    VPXOR ymm2, ymm2, ymm14
+    ; not needed, VPTEST does this for us
+    ;VPXOR ymm2, ymm2, ymm14
 
-    ; if HIT, ymm2 == 0
-    VPTEST ymm2, ymm2
+    ; if HIT, ymm2 == ymm14
+    VPTEST ymm2, ymm14
     ; jz HIT
     ;
-    ; IF ZF==1 then it's a hit, avoid jmp and do SETcc
-    SETZ AL
+    ; IF CF==1 then it's a hit (ymm2==ymm14), avoid jmp and do SETcc
+    ;SETZ AL
+    SETC AL
     ; For legacy mode, store AL at address ES:(E)DI;
     ; For 64-bit mode store AL at address RDI or EDI.
     STOSB
-
+; -------------------------------------------------------------------------------- 
     ; now, try:
     ; 1 - fetch last byte of ymm1[upper], put in some temp space (reg)
     ; 2 - carry it over and put in 1st place of ymm1[lower]

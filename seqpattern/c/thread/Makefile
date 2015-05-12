@@ -8,3 +8,4 @@ default: asm_search.asm caller.c
 clean:
 	rm *.o
 	rm *.lst
+	rm caller
