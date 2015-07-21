@@ -11,6 +11,7 @@ extern void _asm_search(char *input, char *pattern, char *hitmask, char *output,
 #define ROWS 10000
 #define INPUT_LEN 100000
 #define PATTERN_LEN 4
+/* #define PATTERN_LEN 2 */
 
 int main(void)
 {
@@ -22,6 +23,8 @@ int main(void)
     char pattern[32]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     char hitmask[32]={255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     strncpy(pattern, "CGCG", 4);
+    /* char hitmask[32]={255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; */
+    /* strncpy(pattern, "TC", 2); */
 
     char **input_matrix;
     char **output_matrix;
@@ -55,7 +58,7 @@ int main(void)
         ftime(&start);
         printf("generate_input(%d x %d) in all threads started...\n", ROWS, INPUT_LEN);
 
-#pragma omp parallel for private(iam, nt)
+/* #pragma omp parallel for private(iam, nt) */
     for(i=0; i<ROWS; i++) {
         int j;
         iam = omp_get_thread_num();

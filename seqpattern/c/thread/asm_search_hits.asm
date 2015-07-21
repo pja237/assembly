@@ -1,11 +1,10 @@
 BITS 64
 
 %define INNER_LOOP 28
-;%define INNER_LOOP 30
 
 section .text
-    global _asm_search
-_asm_search:
+    global _asm_search_hits
+_asm_search_hits:
 
 ; Registers %rbp, %rbx and %r12 through %r15 belong to the calling function and the called function is
 ; required to preserve their values. In other words, a called function must preserve
